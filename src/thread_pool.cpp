@@ -14,8 +14,7 @@ thread_pool::thread_pool(task_queue& queue, size_t num_threads) : target_queue(q
                 std::cout << "[Worker " << i << "] Handling connection on FD: "
                           << client_fd << std::endl;
 
-                // TODO: In the future, this is where worker.cpp logic goes
-                // handle_client(client_fd);
+                handle_client(client_fd);
             }
         });
     }

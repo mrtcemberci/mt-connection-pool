@@ -7,6 +7,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Threads REQUIRED)
 
-add_executable(mt_connection_pool src/server.cpp)
+add_executable(mt_connection_pool
+        src/server.cpp
+        src/task_queue.cpp
+        src/thread_pool.cpp
+        src/worker.cpp
+)
 
 target_link_libraries(mt_connection_pool PRIVATE Threads::Threads)
