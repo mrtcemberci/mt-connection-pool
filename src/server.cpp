@@ -52,7 +52,7 @@ int main() {
             continue; 
         }
 
-        std::cout << "New connection accepted. Pushing FD " << client_socket << " to queue." << std::endl;
+        //std::cout << "New connection accepted. Pushing FD " << client_socket << " to queue." << std::endl;
 
         q.push(static_cast<int>(client_socket));
     }

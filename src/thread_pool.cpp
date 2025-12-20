@@ -11,8 +11,8 @@ thread_pool::thread_pool(task_queue& queue, size_t num_threads) : target_queue(q
                     break;
                 }
 
-                std::cout << "[Worker " << i << "] Handling connection on FD: "
-                          << client_fd << std::endl;
+                // std::cout << "[Worker " << i << "] Handling connection on FD: "
+                //           << client_fd << std::endl;
 
                 handle_client(client_fd);
             }
