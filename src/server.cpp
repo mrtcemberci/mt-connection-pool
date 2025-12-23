@@ -3,15 +3,23 @@
 #endif
 
 #include <iostream>
+#include <vector>
+#include <map>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
 #include "headers/task_queue.h"
 #include "headers/thread_pool.h"
+#include "headers/poller.h"
 
 #pragma comment(lib, "Ws2_32.lib")
 
 #define DEFAULT_PORT "8080"
+
+void set_non_blocking(SOCKET s) {
+    u_long mode = 1;
+    ioctlsocket(s, FIONBIO, &mode);
+}
 
 int main() {
     WSADATA wsaData;
@@ -22,8 +30,8 @@ int main() {
     }
 
     task_queue q;
-    thread_pool pool(q, 4);
-    std::cout << "Server started. Listening on port " << DEFAULT_PORT << "..." << std::endl;
+    thread_pool pool(q, 4); // 4 Worker Threads
+    Poller poller;          // The Event Manager
 
     struct addrinfo *result = NULL, hints;
     ZeroMemory(&hints, sizeof(hints));
@@ -39,42 +47,78 @@ int main() {
     freeaddrinfo(result);
 
     if (listen(listen_socket, SOMAXCONN) == SOCKET_ERROR) {
-        std::cerr << "Listen failed with error: " << WSAGetLastError() << std::endl;
+        std::cerr << "Listen failed: " << WSAGetLastError() << std::endl;
         closesocket(listen_socket);
         WSACleanup();
         return 1;
     }
 
+    set_non_blocking(listen_socket);
+    poller.add(listen_socket, EventType::READ);
+
+    std::cout << "Server (Async Reactor) started on port " << DEFAULT_PORT << "..." << std::endl;
+
+    // Buffer to hold responses waiting to be sent
+    std::map<int, std::string> response_buffers;
+
     while (true) {
-        SOCKET client_socket = accept(listen_socket, NULL, NULL);
-        if (client_socket == INVALID_SOCKET) {
-            std::cerr << "Accept failed: " << WSAGetLastError() << std::endl;
-            continue; 
+        Task completed_task;
+        // This processes the completed tasks
+        while (q.try_pop_completed(completed_task)) {
+            response_buffers[completed_task.client_fd] = completed_task.request_data;
+            poller.add(completed_task.client_fd, EventType::WRITE);
         }
 
-        //std::cout << "New connection accepted. Pushing FD " << client_socket << " to queue." << std::endl;
+        std::vector<IOEvent> events = poller.wait(100); // 100ms timeout
 
-        // Event loop
-        // We read the data HERE. If this were epoll, we would only be here
-        // if we have an IO read event
-        char buffer[1024];
-        int bytes_received = recv(client_socket, buffer, sizeof(buffer) - 1, 0);
+        for (const auto& event : events) {
 
-        if (bytes_received > 0) {
-            buffer[bytes_received] = '\0';
+            if (event.fd == listen_socket) {
+                SOCKET client = accept(listen_socket, NULL, NULL);
+                if (client != INVALID_SOCKET) {
+                    set_non_blocking(client);
+                    poller.add(client, EventType::READ);
+                    // std::cout << "New connection: " << client << std::endl;
+                }
+            }
 
-            Task new_task;
-            new_task.client_fd = static_cast<int>(client_socket);
-            new_task.request_data = std::string(buffer);
+            else if (event.type == EventType::READ) {
+                char buffer[1024];
+                int bytes = recv(event.fd, buffer, sizeof(buffer) - 1, 0);
 
-            q.push(new_task);
-        } else {
-            closesocket(client_socket);
+                if (bytes > 0) {
+                    buffer[bytes] = '\0';
+
+                    poller.remove(event.fd);
+
+                    Task t;
+                    t.client_fd = static_cast<int>(event.fd);
+                    t.request_data = std::string(buffer);
+
+                    q.push(t);
+                } else {
+                    closesocket(event.fd);
+                    poller.remove(event.fd);
+                    response_buffers.erase(static_cast<int>(event.fd));
+                }
+            }
+
+            else if (event.type == EventType::WRITE) {
+                int fd = static_cast<int>(event.fd);
+
+                if (response_buffers.count(fd)) {
+                    const std::string& data = response_buffers[fd];
+                    send(fd, data.c_str(), static_cast<int>(data.size()), 0);
+
+                    response_buffers.erase(fd);
+                    poller.remove(fd);
+                    closesocket(fd);
+                }
+            }
         }
     }
 
     closesocket(listen_socket);
     WSACleanup();
-
     return 0;
 }

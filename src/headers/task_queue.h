@@ -20,10 +20,15 @@ public:
 
     Task pop();
 
+    void push_completed(Task task);
+
+    bool try_pop_completed(Task& task);
+
     void shutdown();
 
 private:
     std::queue<Task> internal_queue;
+    std::queue<Task> completed_queue;
     std::mutex mtx;
     std::condition_variable cv;
     bool stop_flag;

@@ -12,6 +12,7 @@ add_executable(mt_connection_pool
         src/task_queue.cpp
         src/thread_pool.cpp
         src/worker.cpp
+        src/poller.cpp
 )
 
 add_executable(latency_bench src/latency_benchmark.cpp)

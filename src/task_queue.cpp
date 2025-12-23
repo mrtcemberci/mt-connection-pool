@@ -24,6 +24,21 @@ Task task_queue::pop() {
     return task;
 }
 
+void task_queue::push_completed(Task task) {
+    std::lock_guard lock(mtx);
+    completed_queue.push(task);
+}
+
+bool task_queue::try_pop_completed(Task& task) {
+    std::lock_guard lock(mtx);
+    if (completed_queue.empty()) {
+        return false;
+    }
+    task = completed_queue.front();
+    completed_queue.pop();
+    return true;
+}
+
 void task_queue::shutdown() {
     std::lock_guard lock(mtx);
     stop_flag = true;

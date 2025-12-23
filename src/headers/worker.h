@@ -3,6 +3,6 @@
 
 #include "task_queue.h"
 
-void handle_client(Task task);
+void handle_client(Task task, task_queue& queue);
 
 #endif

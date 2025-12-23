@@ -11,7 +11,7 @@ thread_pool::thread_pool(task_queue& queue, size_t num_threads) : target_queue(q
                     break;
                 }
 
-                handle_client(task);
+                handle_client(task,target_queue);
             }
         });
     }
