@@ -5,16 +5,13 @@ thread_pool::thread_pool(task_queue& queue, size_t num_threads) : target_queue(q
     for (size_t i = 0; i < num_threads; ++i) {
         workers.emplace_back([this, i] {
             while (true) {
-                int client_fd = target_queue.pop();
+                Task task = target_queue.pop();
 
-                if (client_fd == -1) {
+                if (task.client_fd == -1) {
                     break;
                 }
 
-                // std::cout << "[Worker " << i << "] Handling connection on FD: "
-                //           << client_fd << std::endl;
-
-                handle_client(client_fd);
+                handle_client(task);
             }
         });
     }

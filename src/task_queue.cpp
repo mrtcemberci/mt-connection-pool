@@ -2,26 +2,26 @@
 
 task_queue::task_queue() : stop_flag(false) {}
 
-void task_queue::push(int client_fd) {
+void task_queue::push(Task task) {
     std::lock_guard lock(mtx);
-    internal_queue.push(client_fd);
+    internal_queue.push(task);
     cv.notify_one();
 }
 
-int task_queue::pop() {
-    std::unique_lock lock(mtx);
+Task task_queue::pop() {
+    std::unique_lock<std::mutex> lock(mtx);
 
     cv.wait(lock, [this]() {
         return !internal_queue.empty() || stop_flag;
     });
 
     if (stop_flag && internal_queue.empty()) {
-        return -1;
+        return {-1, ""};
     }
 
-    int client_fd = internal_queue.front();
+    Task task = internal_queue.front();
     internal_queue.pop();
-    return client_fd;
+    return task;
 }
 
 void task_queue::shutdown() {

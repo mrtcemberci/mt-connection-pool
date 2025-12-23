@@ -4,20 +4,26 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
+#include <string>
+
+struct Task {
+    int client_fd;
+    std::string request_data;
+};
 
 class task_queue {
 public:
     task_queue();
     ~task_queue() = default;
 
-    void push(int client_fd);
+    void push(Task task);
 
-    int pop();
+    Task pop();
 
     void shutdown();
 
 private:
-    std::queue<int> internal_queue;
+    std::queue<Task> internal_queue;
     std::mutex mtx;
     std::condition_variable cv;
     bool stop_flag;

@@ -54,7 +54,23 @@ int main() {
 
         //std::cout << "New connection accepted. Pushing FD " << client_socket << " to queue." << std::endl;
 
-        q.push(static_cast<int>(client_socket));
+        // Event loop
+        // We read the data HERE. If this were epoll, we would only be here
+        // if we have an IO read event
+        char buffer[1024];
+        int bytes_received = recv(client_socket, buffer, sizeof(buffer) - 1, 0);
+
+        if (bytes_received > 0) {
+            buffer[bytes_received] = '\0';
+
+            Task new_task;
+            new_task.client_fd = static_cast<int>(client_socket);
+            new_task.request_data = std::string(buffer);
+
+            q.push(new_task);
+        } else {
+            closesocket(client_socket);
+        }
     }
 
     closesocket(listen_socket);
