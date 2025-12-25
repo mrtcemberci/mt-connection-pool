@@ -20,14 +20,13 @@ bool handle_client(const Task& task, task_queue& q) {
         buffer[bytes_received] = '\0';
         std::string request(buffer);
 
-        std::string body = "Hello World!";
-
-        std::string response = "HTTP/1.1 200 OK\r\n"
-                               "Content-Type: text/plain\r\n"
-                               "Connection: keep-alive\r\n"
-                               "Content-Length: " + std::to_string(body.length()) + "\r\n"
-                               "\r\n" +
-                               body;
+        static const std::string response =
+                    "HTTP/1.1 200 OK\r\n"
+                    "Content-Type: text/plain\r\n"
+                    "Connection: keep-alive\r\n"
+                    "Content-Length: 12\r\n"
+                    "\r\n"
+                    "Hello World!";
 
         int bytes_sent = send(task.client_fd, response.c_str(), (int)response.length(), 0);
 
@@ -39,7 +38,7 @@ bool handle_client(const Task& task, task_queue& q) {
             return true;
         }
 
-        if (request.find("Connection: close") != std::string::npos) {
+        if (bytes_received > 20 && memcmp(buffer, "Connection: close", 17) == 0) {
             closesocket(task.client_fd);
             return true;
         }

@@ -58,6 +58,10 @@ int main() {
         SOCKET client = accept(listen_socket, NULL, NULL);
         if (client != INVALID_SOCKET) {
             set_non_blocking(client);
+            // Disables Nagle algorithm, No TCP_DELAY, Windows does not wait for more data before sending
+            int no_delay = 1;
+            setsockopt(client, IPPROTO_TCP, TCP_NODELAY, (char*)&no_delay, sizeof(no_delay));
+
             q.push(Task{static_cast<int>(client), TaskType::NEW_CONNECTION, ""});
         }
     }

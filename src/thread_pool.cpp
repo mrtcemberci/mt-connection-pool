@@ -1,12 +1,13 @@
 #include "headers/thread_pool.h"
 #include <iostream>
 #include "headers/poller.h"
+#include <windows.h>
 
 thread_pool::thread_pool(task_queue& queue, size_t num_threads) : target_queue(queue) {
     for (size_t i = 0; i < num_threads; ++i) {
         workers.emplace_back([this, i] {
+            SetThreadAffinityMask(GetCurrentThread(), static_cast<DWORD_PTR>(1) << i);
             Poller private_poller;
-
             while (true) {
                 Task newTask = target_queue.try_pop_new();
 
@@ -19,7 +20,8 @@ thread_pool::thread_pool(task_queue& queue, size_t num_threads) : target_queue(q
                     private_poller.add(newTask.client_fd, EventType::READ);
                 }
 
-                std::vector<IOEvent> events = private_poller.wait(10);
+                constexpr int timeout = 0;
+                std::vector<IOEvent> events = private_poller.wait(timeout);
 
                 for (const auto& event : events) {
                     if (event.type == EventType::READ) {

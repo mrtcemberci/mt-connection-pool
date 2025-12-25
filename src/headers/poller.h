@@ -6,7 +6,6 @@
 
 enum class EventType {
     READ,
-    WRITE
 };
 
 struct IOEvent {
@@ -21,9 +20,6 @@ public:
 
     // Register a file descriptor to monitor for specific events
     void add(SOCKET fd, EventType type);
-
-    // Modify an existing file descriptor's monitored events
-    void update(SOCKET fd, EventType type);
 
     // Stop monitoring a file descriptor
     void remove(SOCKET fd);
