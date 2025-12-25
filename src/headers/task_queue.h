@@ -6,9 +6,12 @@
 #include <condition_variable>
 #include <string>
 
+enum class TaskType { NEW_CONNECTION, READ_READY};
+
 struct Task {
     int client_fd;
-    std::string request_data;
+    TaskType type;
+    std::string data;
 };
 
 class task_queue {
@@ -18,19 +21,15 @@ public:
 
     void push(Task task);
 
-    Task pop();
+    Task try_pop_new();
 
-    void push_completed(Task task);
-
-    bool try_pop_completed(Task& task);
+    bool is_shutdown();
 
     void shutdown();
 
 private:
     std::queue<Task> internal_queue;
-    std::queue<Task> completed_queue;
     std::mutex mtx;
-    std::condition_variable cv;
     bool stop_flag;
 };
 
