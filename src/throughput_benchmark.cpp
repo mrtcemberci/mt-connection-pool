@@ -4,6 +4,7 @@
 #include <atomic>
 #include <chrono>
 #include <winsock2.h>
+#include <ws2tcpip.h>
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -11,21 +12,35 @@ std::atomic<int> total_completed(0);
 std::atomic<bool> running(true);
 
 void throughput_worker(const char* ip, int port) {
-    while (running) {
-        SOCKET s = socket(AF_INET, SOCK_STREAM, 0);
-        sockaddr_in addr;
-        addr.sin_family = AF_INET;
-        addr.sin_port = htons(port);
-        addr.sin_addr.s_addr = inet_addr(ip);
+    SOCKET s = socket(AF_INET, SOCK_STREAM, 0);
+    sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
 
-        if (connect(s, reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr)) == 0) {
-            send(s, "GET / HTTP/1.1\r\n\r\n", 18, 0);
-            char buf[1024];
-            recv(s, buf, 1024, 0);
-            total_completed++;
-        }
+    if (connect(s, reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr)) != 0) {
+        std::cerr << "Connect failed: " << WSAGetLastError() << std::endl;
         closesocket(s);
+        return;
     }
+
+    while (running) {
+        const char* request = "GET / HTTP/1.1\r\n\r\n";
+        if (send(s, request, 18, 0) == SOCKET_ERROR) {
+            break;
+        }
+
+        char buf[1024];
+        int bytes = recv(s, buf, sizeof(buf), 0);
+
+        if (bytes > 0) {
+            total_completed++;
+        } else {
+            break;
+        }
+    }
+
+    closesocket(s);
 }
 
 int main() {
