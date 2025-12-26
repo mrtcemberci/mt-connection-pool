@@ -1,13 +1,13 @@
 #include "headers/task_queue.h"
 
-task_queue::task_queue() : stop_flag(false) {}
+task_queue_lock::task_queue_lock() : stop_flag(false) {}
 
-void task_queue::push(Task task) {
+void task_queue_lock::push(Task task) {
     std::lock_guard lock(mtx);
     internal_queue.push(task);
 }
 
-Task task_queue::try_pop_new() {
+Task task_queue_lock::try_pop_new() {
     std::lock_guard<std::mutex> lock(mtx);
     if (internal_queue.empty()) {
         return {-1, TaskType::READ_READY,""};
@@ -17,11 +17,12 @@ Task task_queue::try_pop_new() {
     return t;
 }
 
-bool task_queue::is_shutdown() {
+bool task_queue_lock::is_shutdown() {
+    std::lock_guard lock(mtx);
     return stop_flag;
 }
 
-void task_queue::shutdown() {
+void task_queue_lock::shutdown() {
     std::lock_guard lock(mtx);
     stop_flag = true;
 }
