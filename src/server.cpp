@@ -29,7 +29,7 @@ int main() {
         return 1;
     }
 
-    task_queue_lock q;
+    lock_free_queue q;
     thread_pool pool(q, 4); // 4 Worker Threads
 
     struct addrinfo *result = NULL, hints;
